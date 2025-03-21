@@ -14,11 +14,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Inspection App',
+      title: 'Aplicación de Inspecciones',
       theme: AppTheme.lightTheme,
       initialRoute: '/',
       routes: {
-        '/': (context) => const HomeScreen(title: 'Inspection App'),
+        '/': (context) => const HomeScreen(title: 'Aplicación de Inspecciones'),
         '/add': (context) => const AddInspectionScreen(),
         '/edit': (context) => const EditInspectionScreen(),
       },

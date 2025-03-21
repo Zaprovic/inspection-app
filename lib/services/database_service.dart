@@ -39,7 +39,6 @@ CREATE TABLE IF NOT EXISTS $_databaseName(
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
-          // Add status column if upgrading from version 1
           await db.execute(
             'ALTER TABLE $_databaseName ADD COLUMN status TEXT NOT NULL DEFAULT "Pendiente de sincronización"',
           );
@@ -67,6 +66,7 @@ CREATE TABLE IF NOT EXISTS $_databaseName(
     return await db.query(_databaseName, orderBy: 'date DESC');
   }
 
+  // get single inspection
   Future<Map<String, dynamic>?> getInspection(int id) async {
     final db = await database;
     final List<Map<String, dynamic>> results = await db.query(

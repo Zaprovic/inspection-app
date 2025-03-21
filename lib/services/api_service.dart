@@ -8,7 +8,6 @@ class ApiService {
   static const String baseUrl =
       'https://67dc837ee00db03c406846b6.mockapi.io/inspections_mock';
 
-  // Singleton pattern
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
