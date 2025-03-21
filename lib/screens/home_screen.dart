@@ -142,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton:
           inspecciones.isEmpty
               ? null // Don't show the button when there are no inspections
-              : FloatingActionButton.extended(
+              : FloatingActionButton(
                 onPressed: () async {
                   final resultado = await Navigator.pushNamed(context, '/add');
                   if (resultado != null && resultado is Inspection) {
@@ -160,9 +160,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                 },
                 tooltip: 'Añadir Inspección',
-                icon: const Icon(Icons.add),
-                label: const Text('Nueva Inspección'),
+                child: const Icon(Icons.add),
               ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -410,249 +410,230 @@ class TarjetaInspeccion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final formateadorFecha = DateFormat('MMM d, yyyy');
-    final tema = Theme.of(context);
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
 
     return Card(
       clipBehavior: Clip.antiAlias,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      inspection.title,
-                      style: tema.textTheme.titleLarge?.copyWith(
-                        fontSize: isSmallScreen ? 16 : 18,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder:
-                            (ctx) => AlertDialog(
-                              title: const Text('Eliminar Inspección'),
-                              content: const Text(
-                                '¿Estás seguro de que quieres eliminar esta inspección?',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx),
-                                  child: const Text('CANCELAR'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(ctx);
-                                    onDelete();
-                                  },
-                                  child: const Text('ELIMINAR'),
-                                ),
-                              ],
-                            ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                inspection.description,
-                style: tema.textTheme.bodyMedium?.copyWith(
-                  fontSize: isSmallScreen ? 13 : 14,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Status indicator at the top of the card
+            Container(
+              height: 8,
+              decoration: BoxDecoration(
+                color:
+                    inspection.status == 'Sincronizada'
+                        ? Colors.green.shade400
+                        : Colors.amber.shade400,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 12),
-              // Make the date and location row more responsive
-              Wrap(
-                spacing: 16,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
+            ),
+            Padding(
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(Icons.calendar_today, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        formateadorFecha.format(inspection.date),
-                        style: tema.textTheme.bodySmall?.copyWith(
-                          fontSize: isSmallScreen ? 10 : 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.location_on, size: 14),
-                      const SizedBox(width: 4),
-                      Flexible(
+                      Expanded(
+                        flex: 3,
                         child: Text(
-                          'Lat: ${inspection.location[0].toStringAsFixed(2)}, '
-                          'Long: ${inspection.location[1].toStringAsFixed(2)}',
-                          style: tema.textTheme.bodySmall?.copyWith(
-                            fontSize: isSmallScreen ? 10 : 12,
+                          inspection.title,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontSize: isSmallScreen ? 16 : 18,
+                            fontWeight: FontWeight.bold,
                           ),
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder:
+                                (ctx) => AlertDialog(
+                                  title: const Text('Eliminar Inspección'),
+                                  content: const Text(
+                                    '¿Estás seguro de que quieres eliminar esta inspección?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx),
+                                      child: const Text('CANCELAR'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(ctx);
+                                        onDelete();
+                                      },
+                                      child: const Text('ELIMINAR'),
+                                    ),
+                                  ],
+                                ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0,
+                      vertical: 4.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      inspection.status,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontSize: isSmallScreen ? 10 : 12,
+                        color:
+                            inspection.status == 'Sincronizada'
+                                ? Colors.green.shade700
+                                : Colors.amber.shade900,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    inspection.description,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: isSmallScreen ? 13 : 14,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 16),
+                  Divider(
+                    height: 1,
+                    color: theme.dividerColor.withOpacity(0.3),
+                  ),
+                  const SizedBox(height: 16),
+                  // Info grid with icons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today,
+                              size: 16,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                formateadorFecha.format(inspection.date),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontSize: isSmallScreen ? 11 : 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 16,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Lat: ${inspection.location[0].toStringAsFixed(2)}, '
+                                'Long: ${inspection.location[1].toStringAsFixed(2)}',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontSize: isSmallScreen ? 11 : 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Action buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (onSync != null)
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.sync, size: 16),
+                          label: const Text('Sincronizar'),
+                          style: OutlinedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            foregroundColor: theme.colorScheme.primary,
+                            side: BorderSide(color: theme.colorScheme.primary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onPressed: onSync,
+                        ),
+                      if (onSync != null) const SizedBox(width: 8),
+                      FilledButton.icon(
+                        icon: const Icon(Icons.map, size: 16),
+                        label: const Text('Ver mapa'),
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => MapsScreen(
+                                    latitude: inspection.location[0],
+                                    longitude: inspection.location[1],
+                                    title: inspection.title,
+                                  ),
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // Make the bottom row more responsive
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final availableWidth = constraints.maxWidth;
-
-                  // If we have enough space, use a Row, otherwise use a Column
-                  if (availableWidth >= 320) {
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildStatusChip(isSmallScreen),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (onSync != null)
-                              IconButton(
-                                icon: const Icon(Icons.sync, size: 20),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                visualDensity: VisualDensity.compact,
-                                onPressed: onSync,
-                                tooltip: 'Sincronizar',
-                              ),
-                            const SizedBox(width: 8),
-                            TextButton.icon(
-                              icon: const Icon(Icons.map, size: 16),
-                              label: Text(
-                                'Ver en mapa',
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 12 : 14,
-                                ),
-                              ),
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: isSmallScreen ? 8 : 12,
-                                  vertical: isSmallScreen ? 4 : 8,
-                                ),
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => MapsScreen(
-                                          latitude: inspection.location[0],
-                                          longitude: inspection.location[1],
-                                          title: inspection.title,
-                                        ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
-                  } else {
-                    // For very small screens, stack the elements vertically
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildStatusChip(isSmallScreen),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            if (onSync != null) ...[
-                              IconButton(
-                                icon: const Icon(Icons.sync, size: 20),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                visualDensity: VisualDensity.compact,
-                                onPressed: onSync,
-                                tooltip: 'Sincronizar',
-                              ),
-                              const SizedBox(width: 8),
-                            ],
-                            TextButton.icon(
-                              icon: const Icon(Icons.map, size: 16),
-                              label: const Text(
-                                'Ver en mapa',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => MapsScreen(
-                                          latitude: inspection.location[0],
-                                          longitude: inspection.location[1],
-                                          title: inspection.title,
-                                        ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
-                  }
-                },
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
-
-  Widget _buildStatusChip(bool isSmall) {
-    return Chip(
-      label: Text(
-        inspection.status,
-        style: TextStyle(
-          fontSize: isSmall ? 10 : 12,
-          color:
-              inspection.status == 'Sincronizada' ? Colors.white : Colors.black,
-        ),
-      ),
-      padding: EdgeInsets.zero,
-      labelPadding: EdgeInsets.symmetric(horizontal: isSmall ? 6 : 8),
-      visualDensity: VisualDensity.compact,
-      backgroundColor:
-          inspection.status == 'Sincronizada' ? Colors.green : Colors.amber,
     );
   }
 }
