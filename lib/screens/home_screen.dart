@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:inspection_app/screens/maps_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:inspection_app/models/inspection.dart';
 import 'package:inspection_app/widgets/connectivity_status.dart';
@@ -388,6 +389,27 @@ class TarjetaInspeccion extends StatelessWidget {
                     style: tema.textTheme.bodySmall,
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.map),
+                  label: const Text('Ver en mapa'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => MapsScreen(
+                              latitude: inspection.location[0],
+                              longitude: inspection.location[1],
+                              title: inspection.title,
+                            ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
