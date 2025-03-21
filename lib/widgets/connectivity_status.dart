@@ -14,6 +14,7 @@ class _ConnectivityStatusState extends State<ConnectivityStatus> {
   ConnectivityResult _connectionStatus = ConnectivityResult.none;
   final Connectivity _connectivity = Connectivity();
   late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+  bool get hasWifiConnection => _connectionStatus == ConnectivityResult.wifi;
 
   @override
   void initState() {

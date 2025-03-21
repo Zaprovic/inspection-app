@@ -25,7 +25,7 @@ class DatabaseService {
 
     final database = await openDatabase(
       databasePath,
-      version: 1,
+      version: 2, // Increased version for schema update
       onCreate: (db, version) {
         return db.execute('''
 CREATE TABLE IF NOT EXISTS $_databaseName(
@@ -33,8 +33,17 @@ CREATE TABLE IF NOT EXISTS $_databaseName(
   title TEXT,
   date TEXT,
   location TEXT,
-  description TEXT
+  description TEXT,
+  status TEXT NOT NULL DEFAULT "Pendiente de sincronización"
 )''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Add status column if upgrading from version 1
+          await db.execute(
+            'ALTER TABLE $_databaseName ADD COLUMN status TEXT NOT NULL DEFAULT "Pendiente de sincronización"',
+          );
+        }
       },
     );
     return database;
@@ -43,13 +52,19 @@ CREATE TABLE IF NOT EXISTS $_databaseName(
   // Create operation
   Future<int> createInspection(Map<String, dynamic> inspection) async {
     final db = await database;
+
+    // Ensure status field is included
+    if (!inspection.containsKey('status')) {
+      inspection['status'] = 'Pendiente de sincronización';
+    }
+
     return await db.insert(_databaseName, inspection);
   }
 
   // Read operations
   Future<List<Map<String, dynamic>>> getAllInspections() async {
     final db = await database;
-    return await db.query(_databaseName);
+    return await db.query(_databaseName, orderBy: 'date DESC');
   }
 
   Future<Map<String, dynamic>?> getInspection(int id) async {
@@ -67,12 +82,36 @@ CREATE TABLE IF NOT EXISTS $_databaseName(
     return null;
   }
 
+  // Get inspections by status
+  Future<List<Map<String, dynamic>>> getInspectionsByStatus(
+    String status,
+  ) async {
+    final db = await database;
+    return await db.query(
+      _databaseName,
+      where: 'status = ?',
+      whereArgs: [status],
+      orderBy: 'date DESC',
+    );
+  }
+
   // Update operation
   Future<int> updateInspection(int id, Map<String, dynamic> inspection) async {
     final db = await database;
     return await db.update(
       _databaseName,
       inspection,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Update only the status of an inspection
+  Future<int> updateInspectionStatus(int id, String status) async {
+    final db = await database;
+    return await db.update(
+      _databaseName,
+      {'status': status},
       where: 'id = ?',
       whereArgs: [id],
     );
