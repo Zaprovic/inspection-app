@@ -4,6 +4,8 @@ import 'package:inspection_app/models/inspection.dart';
 import 'package:intl/intl.dart';
 import 'package:inspection_app/widgets/connectivity_status.dart';
 import 'package:inspection_app/services/database_service.dart';
+import 'package:provider/provider.dart';
+import 'package:inspection_app/providers/sync_provider.dart';
 
 class EditInspectionScreen extends StatefulWidget {
   const EditInspectionScreen({super.key});
@@ -24,6 +26,7 @@ class _EditInspectionScreenState extends State<EditInspectionScreen> {
   int? _inspectionId;
   bool _isLoading = true;
   final _dateFormatter = DateFormat('MMM d, yyyy');
+  bool _wasAlreadyPending = false;
 
   @override
   void initState() {
@@ -85,6 +88,9 @@ class _EditInspectionScreenState extends State<EditInspectionScreen> {
                 .map((e) => double.parse(e.trim()))
                 .toList();
 
+        final status = inspectionData['status'] as String;
+        _wasAlreadyPending = status == 'Pendiente de sincronización';
+
         setState(() {
           _inspection = Inspection(
             id: _inspectionId, // Store the ID in the inspection object
@@ -92,6 +98,7 @@ class _EditInspectionScreenState extends State<EditInspectionScreen> {
             description: inspectionData['description'],
             date: DateTime.parse(inspectionData['date']),
             location: locationArray,
+            status: status, // Store the status
           );
 
           _titleController.text = _inspection!.title;
@@ -171,12 +178,22 @@ class _EditInspectionScreenState extends State<EditInspectionScreen> {
           'description': _descriptionController.text,
           'date': _selectedDate.toIso8601String(),
           'location': '${location[0]},${location[1]}',
+          'status':
+              'Pendiente de sincronización', // Always set to pending when updated
         };
 
         await DatabaseService.instance.updateInspection(
           _inspectionId!,
           updatedInspection,
         );
+
+        // If it wasn't already pending, increment the sync counter
+        if (!_wasAlreadyPending) {
+          Provider.of<SyncProvider>(
+            context,
+            listen: false,
+          ).incrementPendingSyncs();
+        }
 
         if (mounted) {
           // Return more complete data for updating the home screen
@@ -186,6 +203,7 @@ class _EditInspectionScreenState extends State<EditInspectionScreen> {
             description: _descriptionController.text,
             date: _selectedDate,
             location: location,
+            status: 'Pendiente de sincronización',
           );
 
           Navigator.pop(context, {
@@ -215,6 +233,14 @@ class _EditInspectionScreenState extends State<EditInspectionScreen> {
       });
 
       await DatabaseService.instance.deleteInspection(_inspectionId!);
+
+      // If we're deleting a pending sync, update the counter
+      if (_wasAlreadyPending) {
+        Provider.of<SyncProvider>(
+          context,
+          listen: false,
+        ).decrementPendingSyncs();
+      }
 
       if (mounted) {
         Navigator.pop(context, {'action': 'delete'});

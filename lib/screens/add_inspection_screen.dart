@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:inspection_app/models/inspection.dart';
 import 'package:intl/intl.dart';
 import 'package:inspection_app/widgets/connectivity_status.dart';
+import 'package:provider/provider.dart';
+import 'package:inspection_app/providers/sync_provider.dart';
+import 'package:inspection_app/services/database_service.dart';
 
 class AddInspectionScreen extends StatefulWidget {
   const AddInspectionScreen({super.key});
@@ -54,6 +57,7 @@ class _AddInspectionScreenState extends State<AddInspectionScreen> {
           double.parse(_latController.text),
           double.parse(_longController.text),
         ],
+        status: 'Pendiente de sincronización', // Set default status
       );
 
       Navigator.pop(context, newInspection);

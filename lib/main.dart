@@ -3,9 +3,19 @@ import 'package:inspection_app/screens/home_screen.dart';
 import 'package:inspection_app/screens/add_inspection_screen.dart';
 import 'package:inspection_app/screens/edit_inspection.dart';
 import 'package:inspection_app/theme/app_theme.dart';
+import 'package:provider/provider.dart';
+import 'package:inspection_app/providers/sync_provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SyncProvider()),
+        // Add other providers if necessary
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

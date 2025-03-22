@@ -5,6 +5,8 @@ import 'package:inspection_app/theme/app_theme.dart';
 import 'package:inspection_app/services/database_service.dart';
 import 'package:inspection_app/services/api_service.dart';
 import 'package:inspection_app/widgets/home/inspection_card.dart';
+import 'package:provider/provider.dart';
+import 'package:inspection_app/providers/sync_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.title});
@@ -18,7 +20,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<Inspection> inspecciones = [];
   bool isLoading = true;
-  int pendingSyncs = 0;
 
   @override
   void initState() {
@@ -51,11 +52,11 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }).toList();
 
-      // Count pending syncs
-      pendingSyncs =
-          loadedInspections
-              .where((i) => i.status == 'Pendiente de sincronización')
-              .length;
+      // Update the provider with the pending syncs count
+      await Provider.of<SyncProvider>(
+        context,
+        listen: false,
+      ).loadPendingSyncs();
 
       setState(() {
         inspecciones = loadedInspections;
@@ -87,6 +88,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         );
+
+        // Reset the pending syncs counter since all were synced
+        Provider.of<SyncProvider>(context, listen: false).resetPendingSyncs();
+
         await _loadInspections(); // Reload to update UI
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -112,6 +117,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Use the provider to get the pendingSyncs value
+    final syncProvider = Provider.of<SyncProvider>(context);
+    final pendingSyncs = syncProvider.pendingSyncs;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -152,7 +161,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         inspecciones.add(createdInspection);
                         if (createdInspection.status ==
                             'Pendiente de sincronización') {
-                          pendingSyncs++;
+                          Provider.of<SyncProvider>(
+                            context,
+                            listen: false,
+                          ).incrementPendingSyncs();
                         }
                       });
                     }
@@ -217,15 +229,28 @@ class _HomeScreenState extends State<HomeScreen> {
                         'date': resultado.date.toIso8601String(),
                         'location':
                             '${resultado.location[0]},${resultado.location[1]}',
+                        'status':
+                            'Pendiente de sincronización', // Ensure status is set
                       };
 
-                      await DatabaseService.instance.createInspection(
-                        inspectionMap,
+                      final id = await DatabaseService.instance
+                          .createInspection(inspectionMap);
+
+                      // Create a new inspection with the ID from the database
+                      final createdInspection = resultado.copyWith(
+                        id: id,
+                        status: 'Pendiente de sincronización',
                       );
 
                       setState(() {
-                        inspecciones.add(resultado);
+                        inspecciones.add(createdInspection);
                       });
+
+                      // Use the provider to update the pending syncs count
+                      Provider.of<SyncProvider>(
+                        context,
+                        listen: false,
+                      ).incrementPendingSyncs();
                     }
                   },
                   icon: const Icon(Icons.add),
@@ -303,6 +328,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   setState(() {
                     inspecciones.removeAt(index);
                   });
+
+                  // Update the SyncProvider if a pending sync was deleted
+                  if (inspeccion.status == 'Pendiente de sincronización') {
+                    Provider.of<SyncProvider>(
+                      context,
+                      listen: false,
+                    ).decrementPendingSyncs();
+                  }
                 } else if (resultado.containsKey('inspection')) {
                   final updatedInspection =
                       resultado['inspection'] as Inspection;
@@ -331,13 +364,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
                   }
 
+                  // Only increment if it wasn't already pending
+                  final wasAlreadyPending =
+                      inspeccion.status == 'Pendiente de sincronización';
+
                   setState(() {
                     // Make sure to update with the pending sync status
                     inspecciones[index] = updatedInspection.copyWith(
                       status: 'Pendiente de sincronización',
                     );
-                    pendingSyncs++; // Increment pending syncs counter
                   });
+
+                  if (!wasAlreadyPending) {
+                    Provider.of<SyncProvider>(
+                      context,
+                      listen: false,
+                    ).incrementPendingSyncs();
+                  }
                 }
               }
             },
@@ -358,6 +401,14 @@ class _HomeScreenState extends State<HomeScreen> {
               setState(() {
                 inspecciones.removeAt(index);
               });
+
+              // Update the SyncProvider if a pending sync was deleted
+              if (inspeccion.status == 'Pendiente de sincronización') {
+                Provider.of<SyncProvider>(
+                  context,
+                  listen: false,
+                ).decrementPendingSyncs();
+              }
             },
             onSync:
                 inspeccion.status == 'Pendiente de sincronización'
@@ -365,6 +416,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       setState(() {
                         isLoading = true;
                       });
+
+                      // Check if we have a valid ID
+                      if (inspeccion.id == null) {
+                        setState(() {
+                          isLoading = false;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Error: No se puede sincronizar una inspección sin ID',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
+                      // Add logging to debug the sync process
+                      print(
+                        'Intentando sincronizar inspección con ID: ${inspeccion.id}',
+                      );
 
                       final success = await ApiService().syncInspection(
                         inspeccion.id!,
@@ -376,9 +447,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           inspecciones[index] = inspeccion.copyWith(
                             status: 'Sincronizada',
                           );
-                          pendingSyncs--;
                         }
                       });
+
+                      // Use provider to update sync count
+                      if (success) {
+                        Provider.of<SyncProvider>(
+                          context,
+                          listen: false,
+                        ).decrementPendingSyncs();
+                      }
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(

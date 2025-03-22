@@ -115,15 +115,28 @@ class ApiService {
 
   // Sync a specific inspection
   Future<bool> syncInspection(int id) async {
+    print('Starting sync for inspection ID: $id');
+
     final hasWifi = await hasWifiConnection();
-    if (!hasWifi) return false;
+    if (!hasWifi) {
+      print('No WiFi connection available');
+      return false;
+    }
 
     final db = DatabaseService.instance;
     final data = await db.getInspection(id);
 
-    if (data == null || data['status'] == 'Sincronizada') {
+    if (data == null) {
+      print('Inspection with ID $id not found in database');
       return false;
     }
+
+    if (data['status'] == 'Sincronizada') {
+      print('Inspection already synchronized');
+      return true; // Already synced
+    }
+
+    print('Inspection data from DB: $data');
 
     final locationStr = data['location'] as String;
     final locationParts = locationStr.split(',');
@@ -139,8 +152,12 @@ class ApiService {
       status: data['status'] as String,
     );
 
+    print('Attempting to upload inspection with title: ${inspection.title}');
     final success = await uploadInspection(inspection);
+    print('Upload result: $success');
+
     if (success) {
+      print('Updating inspection status in database');
       await db.updateInspectionStatus(id, 'Sincronizada');
       return true;
     }
