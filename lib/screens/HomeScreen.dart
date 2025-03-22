@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:inspection_app/models/inspection.dart';
-import 'package:inspection_app/widgets/connectivity_status.dart';
-import 'package:inspection_app/services/database_service.dart';
-import 'package:inspection_app/services/api_service.dart';
+import 'package:inspection_app/widgets/ConnectivityStatus.dart';
+import 'package:inspection_app/services/DatabaseService.dart';
+import 'package:inspection_app/services/ApiService.dart';
 import 'package:provider/provider.dart';
-import 'package:inspection_app/providers/sync_provider.dart';
-import 'package:inspection_app/widgets/home/empty_state_widget.dart';
-import 'package:inspection_app/widgets/home/inspection_list_widget.dart';
+import 'package:inspection_app/providers/SyncProvider.dart';
+import 'package:inspection_app/widgets/home/EmptyStateWidget.dart';
+import 'package:inspection_app/widgets/home/InspectionListWidget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.title});
@@ -25,6 +25,29 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadInspections();
+
+    // Add a post-frame callback to ensure we've fully initialized before listening
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Ensure we're listening to sync provider changes
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+      syncProvider.addListener(_onSyncProviderChanged);
+    });
+  }
+
+  @override
+  void dispose() {
+    // Remove the listener when the widget is disposed
+    Provider.of<SyncProvider>(
+      context,
+      listen: false,
+    ).removeListener(_onSyncProviderChanged);
+    super.dispose();
+  }
+
+  // Callback when sync provider changes
+  void _onSyncProviderChanged() {
+    // This will trigger a rebuild if needed
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadInspections() async {
@@ -52,11 +75,20 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }).toList();
 
-      // Update the provider with the pending syncs count
+      // Update the provider with the actual count of pending syncs from database
+      final pendingCount =
+          loadedInspections
+              .where(
+                (inspection) =>
+                    inspection.status == 'Pendiente de sincronización',
+              )
+              .length;
+
+      // Update the provider with accurate count instead of incrementing/decrementing
       await Provider.of<SyncProvider>(
         context,
         listen: false,
-      ).loadPendingSyncs();
+      ).setPendingSyncs(pendingCount);
 
       setState(() {
         inspecciones = loadedInspections;
@@ -183,20 +215,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () async {
                   final resultado = await Navigator.pushNamed(context, '/add');
                   if (resultado != null && resultado is Inspection) {
-                    final createdInspection = await ApiService()
-                        .createInspection(resultado);
-                    if (createdInspection != null) {
-                      setState(() {
-                        inspecciones.add(createdInspection);
-                        if (createdInspection.status ==
-                            'Pendiente de sincronización') {
-                          Provider.of<SyncProvider>(
-                            context,
-                            listen: false,
-                          ).incrementPendingSyncs();
-                        }
-                      });
-                    }
+                    final inspectionMap = {
+                      'title': resultado.title,
+                      'description': resultado.description,
+                      'date': resultado.date.toIso8601String(),
+                      'location':
+                          '${resultado.location[0]},${resultado.location[1]}',
+                      'status': 'Pendiente de sincronización',
+                    };
+
+                    final id = await DatabaseService.instance.createInspection(
+                      inspectionMap,
+                    );
+
+                    // Create inspection with the right ID and status
+                    final createdInspection = resultado.copyWith(
+                      id: id,
+                      status: 'Pendiente de sincronización',
+                    );
+
+                    setState(() {
+                      inspecciones.add(createdInspection);
+                    });
+
+                    // Reload pending sync count from database instead of incrementing
+                    await _loadInspections();
                   }
                 },
                 tooltip: 'Añadir Inspección',

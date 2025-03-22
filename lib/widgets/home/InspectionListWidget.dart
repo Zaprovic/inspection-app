@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:inspection_app/models/inspection.dart';
-import 'package:inspection_app/providers/sync_provider.dart';
-import 'package:inspection_app/services/api_service.dart';
-import 'package:inspection_app/services/database_service.dart';
-import 'package:inspection_app/widgets/home/inspection_card.dart';
+import 'package:inspection_app/providers/SyncProvider.dart';
+import 'package:inspection_app/services/ApiService.dart';
+import 'package:inspection_app/services/DatabaseService.dart';
+import 'package:inspection_app/widgets/home/InspectionCardWidget.dart';
 import 'package:provider/provider.dart';
 
 class InspectionListWidget extends StatelessWidget {
@@ -90,13 +90,8 @@ class InspectionListWidget extends StatelessWidget {
 
         onInspectionRemoved(index);
 
-        // Update the SyncProvider if a pending sync was deleted
-        if (inspeccion.status == 'Pendiente de sincronización') {
-          Provider.of<SyncProvider>(
-            context,
-            listen: false,
-          ).decrementPendingSyncs();
-        }
+        // Update pending syncs by counting from database after deletion
+        await _updatePendingSyncsFromDatabase(context);
       } else if (resultado.containsKey('inspection')) {
         final updatedInspection = resultado['inspection'] as Inspection;
 
@@ -124,10 +119,6 @@ class InspectionListWidget extends StatelessWidget {
           }
         }
 
-        // Only increment if it wasn't already pending
-        final wasAlreadyPending =
-            inspeccion.status == 'Pendiente de sincronización';
-
         // Make sure to update with the pending sync status
         final updatedInspectionWithStatus = updatedInspection.copyWith(
           status: 'Pendiente de sincronización',
@@ -135,12 +126,8 @@ class InspectionListWidget extends StatelessWidget {
 
         onInspectionUpdated(index, updatedInspectionWithStatus);
 
-        if (!wasAlreadyPending) {
-          Provider.of<SyncProvider>(
-            context,
-            listen: false,
-          ).incrementPendingSyncs();
-        }
+        // Update pending syncs by counting from database after update
+        await _updatePendingSyncsFromDatabase(context);
       }
     }
   }
@@ -162,10 +149,8 @@ class InspectionListWidget extends StatelessWidget {
 
     onInspectionRemoved(index);
 
-    // Update the SyncProvider if a pending sync was deleted
-    if (inspeccion.status == 'Pendiente de sincronización') {
-      Provider.of<SyncProvider>(context, listen: false).decrementPendingSyncs();
-    }
+    // Update pending syncs by counting from database after deletion
+    await _updatePendingSyncsFromDatabase(context);
   }
 
   Future<void> _handleInspectionSync(
@@ -173,44 +158,89 @@ class InspectionListWidget extends StatelessWidget {
     Inspection inspeccion,
     int index,
   ) async {
-    setLoadingState(true);
+    try {
+      setLoadingState(true);
 
-    // Check if we have a valid ID
-    if (inspeccion.id == null) {
-      setLoadingState(false);
+      // Check if we have a valid ID
+      if (inspeccion.id == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Error: No se puede sincronizar una inspección sin ID',
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Add logging to debug the sync process
+      print('Intentando sincronizar inspección con ID: ${inspeccion.id}');
+
+      final success = await ApiService().syncInspection(inspeccion.id!);
+
+      if (success) {
+        // Update the inspection status in the database
+        final allInspections =
+            await DatabaseService.instance.getAllInspections();
+        for (final data in allInspections) {
+          if (data['id'] == inspeccion.id) {
+            await DatabaseService.instance.updateInspection(data['id'] as int, {
+              'status': 'Sincronizada',
+            });
+            break;
+          }
+        }
+
+        // Update the UI with the new status
+        final updatedInspection = inspeccion.copyWith(status: 'Sincronizada');
+        onInspectionUpdated(index, updatedInspection);
+
+        // Immediately update the sync provider counter
+        Provider.of<SyncProvider>(
+          context,
+          listen: false,
+        ).decrementPendingSyncs();
+
+        // To ensure the UI is in sync with the database, also update from database count
+        await _updatePendingSyncsFromDatabase(context);
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error: No se puede sincronizar una inspección sin ID'),
+        SnackBar(
+          content: Text(
+            success
+                ? 'Inspección sincronizada correctamente'
+                : 'No se pudo sincronizar. Comprueba tu conexión WiFi',
+          ),
         ),
       );
-      return;
+    } catch (e) {
+      // Handle any exceptions that might occur
+      print('Error syncing inspection: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error sincronizando: $e')));
+    } finally {
+      // Always set loading state to false when finished, regardless of success or failure
+      setLoadingState(false);
     }
+  }
 
-    // Add logging to debug the sync process
-    print('Intentando sincronizar inspección con ID: ${inspeccion.id}');
+  // Helper method to get accurate pending sync count from database
+  Future<void> _updatePendingSyncsFromDatabase(BuildContext context) async {
+    final allInspections = await DatabaseService.instance.getAllInspections();
+    final pendingCount =
+        allInspections
+            .where(
+              (data) =>
+                  data['status'] as String == 'Pendiente de sincronización',
+            )
+            .length;
 
-    final success = await ApiService().syncInspection(inspeccion.id!);
-
-    setLoadingState(false);
-
-    if (success) {
-      final updatedInspection = inspeccion.copyWith(status: 'Sincronizada');
-      onInspectionUpdated(index, updatedInspection);
-    }
-
-    // Use provider to update sync count
-    if (success) {
-      Provider.of<SyncProvider>(context, listen: false).decrementPendingSyncs();
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Inspección sincronizada correctamente'
-              : 'No se pudo sincronizar. Comprueba tu conexión WiFi',
-        ),
-      ),
-    );
+    // Set the exact count instead of incrementing/decrementing
+    Provider.of<SyncProvider>(
+      context,
+      listen: false,
+    ).setPendingSyncs(pendingCount);
   }
 }

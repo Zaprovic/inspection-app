@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:inspection_app/services/database_service.dart';
+import 'package:inspection_app/services/DatabaseService.dart';
 
 class SyncProvider extends ChangeNotifier {
   int _pendingSyncs = 0;
@@ -10,12 +10,16 @@ class SyncProvider extends ChangeNotifier {
     try {
       final inspectionData = await DatabaseService.instance.getAllInspections();
 
-      _pendingSyncs =
+      final pendingCount =
           inspectionData
               .where((data) => data['status'] == 'Pendiente de sincronización')
               .length;
 
-      notifyListeners();
+      // Only notify if the count actually changed
+      if (_pendingSyncs != pendingCount) {
+        _pendingSyncs = pendingCount;
+        notifyListeners();
+      }
     } catch (e) {
       print('Error loading pending syncs: $e');
     }
@@ -36,5 +40,13 @@ class SyncProvider extends ChangeNotifier {
   void resetPendingSyncs() {
     _pendingSyncs = 0;
     notifyListeners();
+  }
+
+  Future<void> setPendingSyncs(int count) async {
+    // Only update and notify if the count actually changes
+    if (_pendingSyncs != count) {
+      _pendingSyncs = count;
+      notifyListeners();
+    }
   }
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:inspection_app/models/inspection.dart';
-import 'package:inspection_app/providers/sync_provider.dart';
-import 'package:inspection_app/services/database_service.dart';
-import 'package:inspection_app/theme/app_theme.dart';
+import 'package:inspection_app/providers/SyncProvider.dart';
+import 'package:inspection_app/services/DatabaseService.dart';
+import 'package:inspection_app/theme/AppTheme.dart';
 import 'package:provider/provider.dart';
 
 class EmptyStateWidget extends StatelessWidget {
@@ -90,8 +90,25 @@ class EmptyStateWidget extends StatelessWidget {
 
       onInspectionAdded(createdInspection);
 
-      // Use the provider to update the pending syncs count
-      Provider.of<SyncProvider>(context, listen: false).incrementPendingSyncs();
+      // Update pending syncs by counting from database after creation
+      await _updatePendingSyncsFromDatabase(context);
     }
+  }
+
+  // Helper method to get accurate pending sync count from database
+  Future<void> _updatePendingSyncsFromDatabase(BuildContext context) async {
+    final allInspections = await DatabaseService.instance.getAllInspections();
+    final pendingCount =
+        allInspections
+            .where(
+              (data) =>
+                  data['status'] as String == 'Pendiente de sincronización',
+            )
+            .length;
+
+    Provider.of<SyncProvider>(
+      context,
+      listen: false,
+    ).setPendingSyncs(pendingCount);
   }
 }

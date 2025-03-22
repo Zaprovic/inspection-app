@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:inspection_app/models/inspection.dart';
-import 'package:inspection_app/screens/maps_screen.dart';
+import 'package:inspection_app/screens/MapsScreen.dart';
 import 'package:intl/intl.dart';
 
 class InspectionCard extends StatelessWidget {
