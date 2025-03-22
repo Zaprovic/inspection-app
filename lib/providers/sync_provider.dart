@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:inspection_app/services/DatabaseService.dart';
+import 'package:inspection_app/services/database_service.dart';
 
 class SyncProvider extends ChangeNotifier {
   int _pendingSyncs = 0;

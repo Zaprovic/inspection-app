@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:inspection_app/models/inspection.dart';
-import 'package:inspection_app/providers/SyncProvider.dart';
-import 'package:inspection_app/services/ApiService.dart';
-import 'package:inspection_app/services/DatabaseService.dart';
-import 'package:inspection_app/widgets/home/InspectionCardWidget.dart';
+import 'package:inspection_app/models/inspection_model.dart';
+import 'package:inspection_app/providers/sync_provider.dart';
+import 'package:inspection_app/services/api_service.dart';
+import 'package:inspection_app/services/database_service.dart';
+import 'package:inspection_app/widgets/home/inspection_card_widget.dart';
 import 'package:provider/provider.dart';
 
 class InspectionListWidget extends StatelessWidget {

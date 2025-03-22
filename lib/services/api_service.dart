@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:inspection_app/models/inspection.dart';
-import 'package:inspection_app/services/DatabaseService.dart';
+import 'package:inspection_app/models/inspection_model.dart';
+import 'package:inspection_app/services/database_service.dart';
 
 class ApiService {
   static const String baseUrl =

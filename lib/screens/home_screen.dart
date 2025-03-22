@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:inspection_app/models/inspection.dart';
-import 'package:inspection_app/widgets/ConnectivityStatus.dart';
-import 'package:inspection_app/services/DatabaseService.dart';
-import 'package:inspection_app/services/ApiService.dart';
+import 'package:inspection_app/models/inspection_model.dart';
+import 'package:inspection_app/widgets/shared/connectivity_status.dart';
+import 'package:inspection_app/services/database_service.dart';
+import 'package:inspection_app/services/api_service.dart';
 import 'package:provider/provider.dart';
-import 'package:inspection_app/providers/SyncProvider.dart';
-import 'package:inspection_app/widgets/home/EmptyStateWidget.dart';
-import 'package:inspection_app/widgets/home/InspectionListWidget.dart';
+import 'package:inspection_app/providers/sync_provider.dart';
+import 'package:inspection_app/widgets/home/empty_state_widget.dart';
+import 'package:inspection_app/widgets/home/inspection_list_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.title});
@@ -210,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
       floatingActionButton:
           inspecciones.isEmpty
-              ? null // Don't show the button when there are no inspections
+              ? null
               : FloatingActionButton(
                 onPressed: () async {
                   final resultado = await Navigator.pushNamed(context, '/add');

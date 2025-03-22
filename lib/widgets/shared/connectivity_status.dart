@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:inspection_app/theme/AppTheme.dart';
+import 'package:inspection_app/theme/app_theme.dart';
 
 class ConnectivityStatus extends StatefulWidget {
   const ConnectivityStatus({super.key});
