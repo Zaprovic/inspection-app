@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Inspection Application',
+      title: 'Inspection Application change',
       theme: AppTheme.lightTheme,
       initialRoute: '/',
       routes: {
